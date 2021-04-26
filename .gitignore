@@ -1,0 +1,5 @@
+db/
+test_*
+dist/
+build/
+config.cfg
