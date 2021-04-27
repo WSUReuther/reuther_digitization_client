@@ -4,8 +4,18 @@ import os
 
 from reuther_digitization_utils.item_utils import ItemUtils
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QLabel, QPushButton, QTableWidget, QTableWidgetItem, QWidget
+from PyQt5.QtCore import Qt, QPoint
+from PyQt5.QtWidgets import (
+    QCheckBox,
+    QDialogButtonBox,
+    QLabel,
+    QMenu,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QWidget,
+    QWidgetAction
+)
 
 from reuther_digitization_client.database import (
     get_item_progress,
@@ -27,13 +37,16 @@ class Items(QWidget, Ui_Items):
         self.project_dir = None
         self.row_buttons = {}
         self.row_to_item_ids = {}
+        # only filter box column
+        self.allowed_filter_indexes = [2]
         self.scan_storage_location = DigitizationClient.config.get("scan_storage_location")
 
         self.tasks = ["rename", "derivatives", "copy", "complete"]
         self.task_labels = ["Rename Files", "Generate Derivatives", "Copy to HOLD", "Complete"]
 
         logTextBox = QTextEditLogger(self)
-        logTextBox.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
+        logTextBox.setFormatter(formatter)
         logging.getLogger().addHandler(logTextBox)
         logging.getLogger().setLevel(logging.DEBUG)
         self.loggerLayout.addWidget(logTextBox.widget)
@@ -42,6 +55,7 @@ class Items(QWidget, Ui_Items):
         self.project_dir = project_dir
         self.itemsTable.clear()
         self.itemsTable.setRowCount(0)
+        self.itemsTable.horizontalHeader().sectionClicked.connect(self.onHeaderClicked)
         self.itemsTable.setHorizontalHeaderLabels(["Title", "Dates", "Box", "Folder", "Identifier", "Rename", "Derivatives", "Copy", "Complete"])
         self.itemsTable.setAlternatingRowColors(True)
         self.itemsTable.setEditTriggers(QTableWidget.NoEditTriggers)
@@ -67,7 +81,81 @@ class Items(QWidget, Ui_Items):
             for task_i, col_i in zip(list(range(task_widget_range)), list(range(col_start, col_end))):
                 self.itemsTable.setCellWidget(row_position, col_i, task_widgets[task_i])
             row_position += 1
+        self.keywords = dict([(i, []) for i in range(self.itemsTable.columnCount())])
         self.itemsTable.resizeColumnsToContents()
+
+    def onHeaderClicked(self, index):
+        # only filter box column
+        if index in self.allowed_filter_indexes:
+            self.menu = QMenu(self)
+            self.col = index
+            data_unique = []
+            self.checkBoxes = []
+
+            deselectBtn = QPushButton("Deselect all")
+            deselectBtn.clicked.connect(self.deselectAll)
+            deselectAction = QWidgetAction(self.menu)
+            deselectAction.setDefaultWidget(deselectBtn)
+            self.menu.addAction(deselectAction)
+
+            for i in range(self.itemsTable.rowCount()):
+                item = self.itemsTable.item(i, index)
+                if item.text() not in data_unique:
+                    data_unique.append(item.text())
+                    checkbox = QCheckBox(item.text(), self.menu)
+                    checkbox.setChecked(not self.itemsTable.isRowHidden(i))
+                    checkableAction = QWidgetAction(self.menu)
+                    checkableAction.setDefaultWidget(checkbox)
+                    self.menu.addAction(checkableAction)
+                    self.checkBoxes.append(checkbox)
+
+            dialogBtn = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel,
+                                        Qt.Horizontal, self.menu)
+
+            dialogBtn.accepted.connect(self.filterAndClose)
+            dialogBtn.rejected.connect(self.menu.close)
+            checkableAction = QWidgetAction(self.menu)
+            checkableAction.setDefaultWidget(dialogBtn)
+            self.menu.addAction(checkableAction)
+
+            clearBtn = QPushButton("Clear filter")
+            clearBtn.clicked.connect(self.clearFilter)
+            clearAction = QWidgetAction(self.menu)
+            clearAction.setDefaultWidget(clearBtn)
+            self.menu.addAction(clearAction)
+
+            headerPos = self.itemsTable.mapToGlobal(self.itemsTable.horizontalHeader().pos())
+            posY = headerPos.y() + self.itemsTable.horizontalHeader().height()
+            posX = headerPos.x() + self.itemsTable.horizontalHeader().sectionPosition(index)
+            self.menu.exec_(QPoint(posX, posY))
+
+    def deselectAll(self):
+        for checkbox in self.checkBoxes:
+            checkbox.setChecked(False)
+
+    def clearFilter(self):
+        for i in range(self.itemsTable.rowCount()):
+            self.itemsTable.setRowHidden(i, False)
+        self.menu.close()
+
+    def filterAndClose(self):
+        self.keywords[self.col] = []
+        for element in self.checkBoxes:
+            if element.isChecked():
+                self.keywords[self.col].append(element.text())
+        self.filterdata()
+        self.menu.close()
+
+    def filterdata(self):
+        columnsShow = dict([(i, True) for i in range(self.itemsTable.rowCount())])
+        for i in range(self.itemsTable.rowCount()):
+            for j in self.allowed_filter_indexes:
+                if self.keywords[j]:
+                    item = self.itemsTable.item(i, j)
+                    if item.text() not in self.keywords[j]:
+                        columnsShow[i] = False
+        for key, value in columnsShow.items():
+            self.itemsTable.setRowHidden(key, not value)
 
     def make_task_widgets(self, row_position, item):
         task_widgets = []
