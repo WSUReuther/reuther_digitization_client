@@ -2,7 +2,7 @@
 
 import sys
 
-from PyQt5.QtCore import QThreadPool, QTimer
+from PyQt5.QtCore import QThreadPool
 from PyQt5.QtWidgets import QApplication, QMainWindow
 
 from reuther_digitization_client.config import load_config
@@ -34,7 +34,6 @@ class DigitizationClient(QMainWindow, Ui_ApplicationWindow):
     def load_items(self, project_id, project_dir):
         self.items.load_items(project_id, project_dir)
         self.stackedWidget.setCurrentIndex(1)
-        QTimer.singleShot(150, self.adjustSize)
 
 
 def main():

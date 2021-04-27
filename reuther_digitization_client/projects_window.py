@@ -4,6 +4,7 @@ from functools import partial
 from PyQt5.QtWidgets import (
         QDialog,
         QFileDialog,
+        QHeaderView,
         QMessageBox,
         QPushButton,
         QTableWidgetItem,
@@ -28,6 +29,7 @@ class Projects(QWidget, Ui_Projects):
     def load_projects(self):
         self.projectsTable.clear()
         self.projectsTable.setRowCount(0)
+        self.horizontalHeader = self.projectsTable.horizontalHeader()
         self.projectsTable.setHorizontalHeaderLabels(["id", "Collection ID", "Name", "Project Directory", "Total Items", "Completed Items", "Total Scans", "Load"])
         projects = get_projects()
         row_position = 0
@@ -44,6 +46,8 @@ class Projects(QWidget, Ui_Projects):
             self.projectsTable.setCellWidget(row_position, 7, self.btn_load)
             self.btn_load.clicked.connect(partial(self.load_project, project["id"], project["project_dir"]))
             row_position += 1
+        self.horizontalHeader.setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.horizontalHeader.setStretchLastSection(True)
         self.projectsTable.resizeColumnsToContents()
 
     def add_project(self):

@@ -8,6 +8,7 @@ from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtWidgets import (
     QCheckBox,
     QDialogButtonBox,
+    QHeaderView,
     QLabel,
     QMenu,
     QPushButton,
@@ -55,7 +56,8 @@ class Items(QWidget, Ui_Items):
         self.project_dir = project_dir
         self.itemsTable.clear()
         self.itemsTable.setRowCount(0)
-        self.itemsTable.horizontalHeader().sectionClicked.connect(self.onHeaderClicked)
+        self.horizontalHeader = self.itemsTable.horizontalHeader()
+        self.horizontalHeader.sectionClicked.connect(self.onHeaderClicked)
         self.itemsTable.setHorizontalHeaderLabels(["Title", "Dates", "Box", "Folder", "Identifier", "Rename", "Derivatives", "Copy", "Complete"])
         self.itemsTable.setAlternatingRowColors(True)
         self.itemsTable.setEditTriggers(QTableWidget.NoEditTriggers)
@@ -82,6 +84,9 @@ class Items(QWidget, Ui_Items):
                 self.itemsTable.setCellWidget(row_position, col_i, task_widgets[task_i])
             row_position += 1
         self.keywords = dict([(i, []) for i in range(self.itemsTable.columnCount())])
+        self.horizontalHeader.setSectionResizeMode(QHeaderView.Stretch)
+        for i in range(2, 9):
+            self.horizontalHeader.setSectionResizeMode(i, QHeaderView.ResizeToContents)
         self.itemsTable.resizeColumnsToContents()
 
     def onHeaderClicked(self, index):
@@ -124,9 +129,9 @@ class Items(QWidget, Ui_Items):
             clearAction.setDefaultWidget(clearBtn)
             self.menu.addAction(clearAction)
 
-            headerPos = self.itemsTable.mapToGlobal(self.itemsTable.horizontalHeader().pos())
-            posY = headerPos.y() + self.itemsTable.horizontalHeader().height()
-            posX = headerPos.x() + self.itemsTable.horizontalHeader().sectionPosition(index)
+            headerPos = self.itemsTable.mapToGlobal(self.horizontalHeader.pos())
+            posY = headerPos.y() + self.horizontalHeader.height()
+            posX = headerPos.x() + self.horizontalHeader.sectionPosition(index)
             self.menu.exec_(QPoint(posX, posY))
 
     def deselectAll(self):
