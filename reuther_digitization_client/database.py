@@ -118,8 +118,15 @@ def get_project_items(project_id):
     query.exec_()
     while query.next():
         item = {}
-        item["title"] = query.value(0)
-        item["dates"] = query.value(1)
+        item_title = query.value(0)
+        item_dates = query.value(1)
+        if item_title and item_dates:
+            display_string = f"{item_title}, {item_dates}"
+        elif item_title:
+            display_string = item_title
+        else:
+            display_string = item_dates
+        item["display_string"] = display_string
         item["box"] = query.value(2)
         item["folder"] = query.value(3)
         item["identifier"] = query.value(4)

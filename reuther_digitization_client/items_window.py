@@ -1,6 +1,7 @@
 from functools import partial
 import logging
 import os
+import subprocess
 
 from reuther_digitization_utils.item_utils import ItemUtils
 
@@ -38,8 +39,9 @@ class Items(QWidget, Ui_Items):
         self.project_dir = None
         self.row_buttons = {}
         self.row_to_item_ids = {}
+        self.row_to_item_identifiers = {}
         # only filter box column
-        self.allowed_filter_indexes = [2]
+        self.allowed_filter_indexes = [1]
         self.scan_storage_location = DigitizationClient.config.get("scan_storage_location")
 
         self.tasks = ["rename", "derivatives", "copy", "complete"]
@@ -58,7 +60,7 @@ class Items(QWidget, Ui_Items):
         self.itemsTable.setRowCount(0)
         self.horizontalHeader = self.itemsTable.horizontalHeader()
         self.horizontalHeader.sectionClicked.connect(self.onHeaderClicked)
-        self.itemsTable.setHorizontalHeaderLabels(["Title", "Dates", "Box", "Folder", "Identifier", "Rename", "Derivatives", "Copy", "Complete"])
+        self.itemsTable.setHorizontalHeaderLabels(["Title/Dates", "Box", "Folder", "Identifier", "Open", "Rename", "Derivatives", "Copy", "Complete"])
         self.itemsTable.setAlternatingRowColors(True)
         self.itemsTable.setEditTriggers(QTableWidget.NoEditTriggers)
         items = get_project_items(project_id)
@@ -66,16 +68,19 @@ class Items(QWidget, Ui_Items):
         for item in items:
             self.itemsTable.insertRow(row_position)
             self.row_to_item_ids[row_position] = item["id"]
-            item_title = item["title"]
-            item_dates = item["dates"]
+            item_identifier = item["identifier"]
+            self.row_to_item_identifiers[row_position] = item_identifier
+            display_string = item["display_string"]
             # hack until I figure out why Qt is removing spaces after commas
-            item_title_spaces = item_title.replace(", ", ",  ")
-            item_dates_spaces = item_dates.replace(", ", ",  ")
-            self.itemsTable.setItem(row_position, 0, QTableWidgetItem(item_title_spaces))
-            self.itemsTable.setItem(row_position, 1, QTableWidgetItem(item_dates_spaces))
-            self.itemsTable.setItem(row_position, 2, QTableWidgetItem(item["box"]))
-            self.itemsTable.setItem(row_position, 3, QTableWidgetItem(item["folder"]))
-            self.itemsTable.setItem(row_position, 4, QTableWidgetItem(item["identifier"]))
+            display_string = display_string.replace(", ", ",  ")
+            self.itemsTable.setItem(row_position, 0, QTableWidgetItem(display_string))
+            self.itemsTable.setItem(row_position, 1, QTableWidgetItem(item["box"]))
+            self.itemsTable.setItem(row_position, 2, QTableWidgetItem(item["folder"]))
+            self.itemsTable.setItem(row_position, 3, QTableWidgetItem(item["identifier"]))
+            item_dir = os.path.join(self.project_dir, item_identifier)
+            openDirBtn = QPushButton("Open")
+            openDirBtn.clicked.connect(partial(self.try_open_folder, item_dir))
+            self.itemsTable.setCellWidget(row_position, 4, openDirBtn)
             task_widgets = self.make_task_widgets(row_position, item)
             task_widget_range = len(task_widgets)
             col_start = 5
@@ -85,9 +90,15 @@ class Items(QWidget, Ui_Items):
             row_position += 1
         self.keywords = dict([(i, []) for i in range(self.itemsTable.columnCount())])
         self.horizontalHeader.setSectionResizeMode(QHeaderView.Stretch)
-        for i in range(2, 9):
+        for i in range(1, 9):
             self.horizontalHeader.setSectionResizeMode(i, QHeaderView.ResizeToContents)
         self.itemsTable.resizeColumnsToContents()
+
+    def try_open_folder(self, directory):
+        if os.path.exists(directory):
+            subprocess.call(["open", directory])
+        else:
+            logging.error(f"Directory does not exist: {directory}")
 
     def onHeaderClicked(self, index):
         # only filter box column
@@ -212,7 +223,7 @@ class Items(QWidget, Ui_Items):
 
     def start_worker(self, task, row_position):
         item_id = self.row_to_item_ids[row_position]
-        identifier = self.itemsTable.item(row_position, 4).text()
+        identifier = self.row_to_item_identifiers[row_position]
         project_dir = self.project_dir
         collection_id = os.path.basename(project_dir)
         remote_scans_dir = os.path.join(self.scan_storage_location, collection_id)
