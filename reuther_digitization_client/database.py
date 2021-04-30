@@ -178,10 +178,17 @@ def get_item_progress(item_id):
     return progress
 
 
+def reset_task_progress(item_id):
+    query = QSqlQuery()
+    query.prepare("UPDATE items SET rename=0, derivatives=0, copy=0, complete=0 WHERE id=:item_id")
+    query.bindValue(":item_id", item_id)
+    query.exec_()
+
+
 def update_item_progress(item_id, task):
     query = QSqlQuery()
-    query.prepare("UPDATE items SET %s=1 WHERE id=:id" % task)
-    query.bindValue(":id", item_id)
+    query.prepare("UPDATE items SET %s=1 WHERE id=:item_id" % task)
+    query.bindValue(":item_id", item_id)
     query.exec_()
 
 

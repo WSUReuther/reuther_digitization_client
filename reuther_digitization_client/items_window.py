@@ -22,6 +22,7 @@ from PyQt5.QtWidgets import (
 from reuther_digitization_client.database import (
     get_item_progress,
     get_project_items,
+    reset_task_progress,
     update_item_page_count,
     update_item_progress
 )
@@ -60,7 +61,7 @@ class Items(QWidget, Ui_Items):
         self.itemsTable.setRowCount(0)
         self.horizontalHeader = self.itemsTable.horizontalHeader()
         self.horizontalHeader.sectionClicked.connect(self.onHeaderClicked)
-        self.itemsTable.setHorizontalHeaderLabels(["Title/Dates", "Box", "Folder", "Identifier", "Open", "Rename", "Derivatives", "Copy", "Complete"])
+        self.itemsTable.setHorizontalHeaderLabels(["Title/Dates", "Box", "Folder", "Identifier", "Open", "Rename", "Derivatives", "Copy", "Complete", "Reset"])
         self.itemsTable.setAlternatingRowColors(True)
         self.itemsTable.setEditTriggers(QTableWidget.NoEditTriggers)
         items = get_project_items(project_id)
@@ -87,10 +88,13 @@ class Items(QWidget, Ui_Items):
             col_end = col_start + task_widget_range
             for task_i, col_i in zip(list(range(task_widget_range)), list(range(col_start, col_end))):
                 self.itemsTable.setCellWidget(row_position, col_i, task_widgets[task_i])
+            resetItemBtn = QPushButton("Reset")
+            resetItemBtn.clicked.connect(partial(self.reset_item, row_position))
+            self.itemsTable.setCellWidget(row_position, 9, resetItemBtn)
             row_position += 1
         self.keywords = dict([(i, []) for i in range(self.itemsTable.columnCount())])
         self.horizontalHeader.setSectionResizeMode(QHeaderView.Stretch)
-        for i in range(1, 9):
+        for i in range(1, 10):
             self.horizontalHeader.setSectionResizeMode(i, QHeaderView.ResizeToContents)
         self.itemsTable.resizeColumnsToContents()
 
@@ -202,12 +206,20 @@ class Items(QWidget, Ui_Items):
         for i in range(completed_tasks):
             column = i + 5
             task_label = self.make_task_complete_label()
-            self.itemsTable.removeCellWidget(row_position, column)
             self.itemsTable.setCellWidget(row_position, column, task_label)
         if remaining_tasks > 0:
             self.row_buttons[row_position][0].setEnabled(True)
             for button in self.row_buttons[row_position][1:]:
                 button.setEnabled(False)
+
+    def reset_item(self, row_position):
+        item_id = self.row_to_item_ids[row_position]
+        reset_task_progress(item_id)
+        item_progress = dict((task, 0) for task in self.tasks)
+        task_widgets = self.make_task_widgets(row_position, item_progress)
+        for i, widget in enumerate(task_widgets):
+            column = i + 5
+            self.itemsTable.setCellWidget(row_position, column, widget)
 
     def make_task_complete_label(self):
         task_complete_label = QLabel("✓")

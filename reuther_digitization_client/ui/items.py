@@ -23,7 +23,7 @@ class Ui_Items(object):
         self.verticalLayout.setObjectName("verticalLayout")
         self.itemsTable = QtWidgets.QTableWidget(Items)
         self.itemsTable.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContents)
-        self.itemsTable.setColumnCount(9)
+        self.itemsTable.setColumnCount(10)
         self.itemsTable.setObjectName("itemsTable")
         self.itemsTable.setRowCount(0)
         self.verticalLayout.addWidget(self.itemsTable)
