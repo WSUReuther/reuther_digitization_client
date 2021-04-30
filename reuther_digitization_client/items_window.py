@@ -245,7 +245,7 @@ class Items(QWidget, Ui_Items):
         item_id = self.row_to_item_ids[row_position]
         update_item_progress(item_id, task)
         if task == "rename":
-            page_count = len(os.listdir(item.tiffs_dir))
+            page_count = len(item.get_tiff_filepaths())
             update_item_page_count(item_id, page_count)
 
     def set_task_states_after_thread(self, row_position, item_id):
