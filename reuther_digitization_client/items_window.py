@@ -45,8 +45,15 @@ class Items(QWidget, Ui_Items):
         self.allowed_filter_indexes = [1]
         self.scan_storage_location = DigitizationClient.config.get("scan_storage_location")
 
-        self.tasks = ["rename", "derivatives", "copy", "complete"]
-        self.task_labels = ["Rename Files", "Generate Derivatives", "Copy to HOLD", "Complete"]
+        generate_derivatives = DigitizationClient.config.get("generate_derivatives")
+        if generate_derivatives:
+            self.tasks = ["rename", "derivatives", "copy", "complete"]
+            self.task_labels = ["Rename Files", "Generate Derivatives", "Copy to HOLD", "Complete"]
+            self.headers = ["Title/Dates", "Box", "Folder", "Identifier", "Open", "Rename", "Derivatives", "Copy", "Complete", "Reset"]
+        else:
+            self.tasks = ["rename", "copy", "complete"]
+            self.task_labels = ["Rename Files", "Copy to HOLD", "Complete"]
+            self.headers = ["Title/Dates", "Box", "Folder", "Identifier", "Open", "Rename", "Copy", "Complete", "Reset"]
 
         logTextBox = QTextEditLogger(self)
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
@@ -61,7 +68,7 @@ class Items(QWidget, Ui_Items):
         self.itemsTable.setRowCount(0)
         self.horizontalHeader = self.itemsTable.horizontalHeader()
         self.horizontalHeader.sectionClicked.connect(self.onHeaderClicked)
-        self.itemsTable.setHorizontalHeaderLabels(["Title/Dates", "Box", "Folder", "Identifier", "Open", "Rename", "Derivatives", "Copy", "Complete", "Reset"])
+        self.itemsTable.setHorizontalHeaderLabels(self.headers)
         self.itemsTable.setAlternatingRowColors(True)
         self.itemsTable.setEditTriggers(QTableWidget.NoEditTriggers)
         items = get_project_items(project_id)
@@ -90,7 +97,7 @@ class Items(QWidget, Ui_Items):
                 self.itemsTable.setCellWidget(row_position, col_i, task_widgets[task_i])
             resetItemBtn = QPushButton("Reset")
             resetItemBtn.clicked.connect(partial(self.reset_item, row_position))
-            self.itemsTable.setCellWidget(row_position, 9, resetItemBtn)
+            self.itemsTable.setCellWidget(row_position, col_end, resetItemBtn)
             row_position += 1
         self.keywords = dict([(i, []) for i in range(self.itemsTable.columnCount())])
         self.horizontalHeader.setSectionResizeMode(QHeaderView.Stretch)
