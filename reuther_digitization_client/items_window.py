@@ -59,7 +59,7 @@ class Items(QWidget, Ui_Items):
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', datefmt="%Y-%m-%d %H:%M:%S")
         logTextBox.setFormatter(formatter)
         logging.getLogger().addHandler(logTextBox)
-        logging.getLogger().setLevel(logging.DEBUG)
+        logging.getLogger().setLevel(logging.INFO)
         self.loggerLayout.addWidget(logTextBox.widget)
 
     def load_items(self, project_id, project_dir):
